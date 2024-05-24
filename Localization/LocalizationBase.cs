@@ -3,22 +3,29 @@ using System.Reflection;
 using System.Resources;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Net.Leksi.Localization;
 
 public class LocalizationBase
 {
     private readonly List<ResourceManager> _managers = [];
-    private readonly Dictionary<string, GetterHolder> _getters = [];
+    private readonly Dictionary<string, ValueHolder> _cachedValues = [];
     private string _lastAsk = null!;
+    private CultureInfo _cachedCulture;
+    private CultureInfo? _culture = null;
+    public CultureInfo? Culture
+    {
+        get => _culture ?? CultureInfo.CurrentUICulture;
+        set
+        {
+            _culture = value;
+        }
+    }
     public string this[string ask] => GetString(ask);
     public LocalizationBase()
     {
-        CultureInfo[] allCultures = CultureInfo.GetCultures(CultureTypes.AllCultures);
-        foreach (CultureInfo culture in allCultures)
-        {
-            Console.WriteLine(culture);
-        }
+        _cachedCulture = Culture!;
         Stack<Type> stack = [];
         for (Type curr = GetType(); curr != typeof(LocalizationBase); curr = curr.BaseType!)
         {
@@ -55,48 +62,58 @@ public class LocalizationBase
     public IEnumerable<ResourceInfo> GetResourceInfo(CultureInfo? cultureInfo = null)
     {
         CultureInfo? savedCultureInfo = null;
+        bool cultureChanged = false;
         try
         {
-            if (cultureInfo is { } && cultureInfo != CultureInfo.CurrentUICulture)
+            if (cultureInfo is { } && cultureInfo != Culture)
             {
-                savedCultureInfo = CultureInfo.CurrentUICulture;
-                CultureInfo.CurrentUICulture = cultureInfo;
+                savedCultureInfo = _culture;
+                Culture = cultureInfo;
+                cultureChanged = true;
             }
             foreach (PropertyInfo pi in GetType().GetProperties())
             {
                 if (pi.DeclaringType != typeof(LocalizationBase))
                 {
-                    object? ans = pi.GetValue(this);
+                    try
+                    {
+                        _ = pi.GetValue(this);
+                    }
+                    catch { }
                     if (_lastAsk == pi.Name)
                     {
-                        GetterHolder gh = _getters[pi.Name];
+                        ValueHolder vh = _cachedValues[pi.Name];
                         yield return new ResourceInfo
                         {
                             Name = pi.Name,
-                            Value = ans,
-                            BaseName = gh.BaseName,
-                            ReturnType = gh.ReturnType,
+                            Value = vh.Value,
+                            BaseName = vh.BaseName,
+                            ReturnType = vh.ReturnType,
                             DeclaringType = pi.DeclaringType!,
+                            Culture = vh.Culture,
                         };
                     }
                 }
             }
         }
-        finally 
+        finally
         {
-            if (savedCultureInfo is { })
+            if (cultureChanged)
             {
-                CultureInfo.CurrentUICulture = savedCultureInfo;
+                Culture = savedCultureInfo;
             }
         }
     }
     protected string GetString([CallerMemberName] string ask = null!)
     {
         _lastAsk = ask;
-        string ans = null!;
-        if (!_getters.TryGetValue(ask!, out GetterHolder? getter))
+        if (_cachedCulture != Culture)
         {
-            getter = new GetterHolder
+            _cachedValues.Clear();
+        }
+        if (!_cachedValues.TryGetValue(ask!, out ValueHolder? getter))
+        {
+            getter = new ValueHolder
             {
                 ReturnType = typeof(string),
             };
@@ -104,28 +121,25 @@ public class LocalizationBase
             {
                 if (rm.GetString(ask) is string s)
                 {
-                    ans = s;
+                    getter.Value = s;
                     getter.BaseName = rm.BaseName;
-                    getter.Getter = arg => rm.GetString(arg);
                 }
             }
-            getter.Getter ??= arg => $"[{arg}]";
-            _getters[ask] = getter;
-            ans ??= (string)getter.Getter.Invoke(ask)!;
+            getter.Value ??= $"[{ask}]";
+            _cachedValues[ask] = getter;
         }
-        else
-        {
-            ans = (string)getter.Getter.Invoke(ask)!;
-        }
-        return ans;
+        return (string)getter.Value!;
     }
     protected object? GetObject([CallerMemberName] string ask = null!)
     {
         _lastAsk = ask;
-        object? ans = null;
-        if (!_getters.TryGetValue(ask!, out GetterHolder? getter))
+        if (_cachedCulture != Culture)
         {
-            getter = new GetterHolder
+            _cachedValues.Clear();
+        }
+        if (!_cachedValues.TryGetValue(ask!, out ValueHolder? getter))
+        {
+            getter = new ValueHolder
             {
                 ReturnType = typeof(object),
             };
@@ -133,18 +147,12 @@ public class LocalizationBase
             {
                 if (rm.GetObject(ask) is object o)
                 {
-                    ans = o;
+                    getter.Value = o;
                     getter.BaseName = rm.BaseName;
-                    getter.Getter = arg => rm.GetObject(arg);
                 }
             }
-            getter.Getter ??= arg => null;
-            _getters[ask] = getter;
+            _cachedValues[ask] = getter;
         }
-        else
-        {
-            ans = getter.Getter.Invoke(ask);
-        }
-        return ans;
+        return (string)getter.Value!;
     }
 }
