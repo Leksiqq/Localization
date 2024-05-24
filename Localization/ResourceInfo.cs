@@ -9,5 +9,5 @@ public class ResourceInfo
     public Type ReturnType { get; set; } = null!;
     public object? Value { get; set; }
     public string? BaseName { get; set; }
-    internal CultureInfo? Culture { get; set; }
+    public CultureInfo? Culture { get; set; }
 }

@@ -3,7 +3,6 @@ using System.Reflection;
 using System.Resources;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace Net.Leksi.Localization;
 
@@ -11,8 +10,9 @@ public class LocalizationBase
 {
     private readonly List<ResourceManager> _managers = [];
     private readonly Dictionary<string, ValueHolder> _cachedValues = [];
+    private readonly List<CultureInfo> _probeCultureList = [];
     private string _lastAsk = null!;
-    private CultureInfo _cachedCulture;
+    private CultureInfo? _cachedCulture = null;
     private CultureInfo? _culture = null;
     public CultureInfo? Culture
     {
@@ -25,7 +25,6 @@ public class LocalizationBase
     public string this[string ask] => GetString(ask);
     public LocalizationBase()
     {
-        _cachedCulture = Culture!;
         Stack<Type> stack = [];
         for (Type curr = GetType(); curr != typeof(LocalizationBase); curr = curr.BaseType!)
         {
@@ -71,7 +70,7 @@ public class LocalizationBase
                 Culture = cultureInfo;
                 cultureChanged = true;
             }
-            foreach (PropertyInfo pi in GetType().GetProperties())
+            foreach (PropertyInfo pi in GetType().GetProperties().OrderBy(pi => pi.Name))
             {
                 if (pi.DeclaringType != typeof(LocalizationBase))
                 {
@@ -107,22 +106,25 @@ public class LocalizationBase
     protected string GetString([CallerMemberName] string ask = null!)
     {
         _lastAsk = ask;
-        if (_cachedCulture != Culture)
-        {
-            _cachedValues.Clear();
-        }
+        CheckCulture();
         if (!_cachedValues.TryGetValue(ask!, out ValueHolder? getter))
         {
             getter = new ValueHolder
             {
                 ReturnType = typeof(string),
             };
-            foreach (ResourceManager rm in _managers)
+            foreach(CultureInfo culture in _probeCultureList)
             {
-                if (rm.GetString(ask) is string s)
+                foreach (ResourceManager rm in _managers)
                 {
-                    getter.Value = s;
-                    getter.BaseName = rm.BaseName;
+                    if(
+                        rm.GetString(ask!, culture) is string s
+                    )
+                    {
+                        getter.Value = s;
+                        getter.BaseName = rm.BaseName;
+                        getter.Culture = culture;
+                    }
                 }
             }
             getter.Value ??= $"[{ask}]";
@@ -133,26 +135,43 @@ public class LocalizationBase
     protected object? GetObject([CallerMemberName] string ask = null!)
     {
         _lastAsk = ask;
-        if (_cachedCulture != Culture)
-        {
-            _cachedValues.Clear();
-        }
+        CheckCulture();
         if (!_cachedValues.TryGetValue(ask!, out ValueHolder? getter))
         {
             getter = new ValueHolder
             {
                 ReturnType = typeof(object),
             };
-            foreach (ResourceManager rm in _managers)
+            foreach (CultureInfo culture in _probeCultureList)
             {
-                if (rm.GetObject(ask) is object o)
+                foreach (ResourceManager rm in _managers)
                 {
-                    getter.Value = o;
-                    getter.BaseName = rm.BaseName;
+                    if (rm.GetObject(ask, culture) is object o)
+                    {
+                        getter.Value = o;
+                        getter.BaseName = rm.BaseName;
+                        getter.Culture = culture;
+                    }
                 }
+
             }
             _cachedValues[ask] = getter;
         }
         return (string)getter.Value!;
+    }
+    private void CheckCulture()
+    {
+        if (_cachedCulture != Culture)
+        {
+            _cachedValues.Clear();
+            _cachedCulture = Culture!;
+            _probeCultureList.Clear();
+            _probeCultureList.AddRange(
+                CultureInfo.GetCultures(CultureTypes.AllCultures)
+                    .Where(c => Culture!.Name.StartsWith(c.Name))
+                    .OrderBy(c => c.Name).Reverse()
+            );
+            _probeCultureList.Add(CultureInfo.InvariantCulture);
+        }
     }
 }
