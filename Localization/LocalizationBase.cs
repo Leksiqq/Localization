@@ -6,18 +6,18 @@ using System.Text;
 
 namespace Net.Leksi.Localization;
 
-public class Core
+public class LocalizationBase
 {
     private readonly Dictionary<string, List<ResourceManager>> _managers = [];
     private readonly Dictionary<string, string> _cache = [];
     private CultureInfo _culture;
     public string this[string ask] => GetString(ask);
-    public Core()
+    public LocalizationBase()
     {
         _culture = CultureInfo.CurrentUICulture;
         Dictionary<Type, List<ResourceHolder>> resourceHolders = [];
         Stack<Type> stack = [];
-        for(Type curr = GetType(); curr != typeof(Core); curr = curr.BaseType!)
+        for(Type curr = GetType(); curr != typeof(LocalizationBase); curr = curr.BaseType!)
         {
             resourceHolders[curr] = [];
             stack.Push(curr);
@@ -57,14 +57,9 @@ public class Core
                 }
             }
         }
-        if(sb.Length > 0 )
-        {
-            sb.AppendLine();
-            throw new Exception(sb.ToString());
-        }
         foreach(PropertyInfo pi in GetType().GetProperties())
         {
-            if(pi.DeclaringType != typeof(Core))
+            if(pi.DeclaringType != typeof(LocalizationBase))
             {
                 _managers[pi.Name] = resourceHolders[pi.DeclaringType!]!.Select(rh => rh.ResourceManager).ToList();
                 if (_managers[pi.Name].Count == 0)
@@ -72,6 +67,11 @@ public class Core
                     sb.Append($"\n{++pos}. {pi.DeclaringType!}:\n    there is no {typeof(ResourcePlaceAttribute)} for type.");
                 }
             }
+        }
+        if (sb.Length > 0)
+        {
+            sb.AppendLine();
+            throw new Exception(sb.ToString());
         }
     }
     protected string GetString([CallerMemberName] string ask = null!)
@@ -96,7 +96,6 @@ public class Core
             ans ??= $"[{ask}]";
             _cache[ask] = ans;
         }
-        Console.WriteLine($"Core: {ask}: {ans}");
         return ans;
     }
 }

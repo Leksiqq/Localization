@@ -1,7 +1,7 @@
 ﻿namespace Net.Leksi.Localization;
 
 [ResourcePlace("ClassLibrary1.Resource1")]
-public class Localizer1: Core
+public class Localizer1: LocalizationBase
 {
     public virtual string String1 => GetString();
     public virtual string String2 => GetString();
