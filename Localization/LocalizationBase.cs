@@ -126,6 +126,10 @@ public class LocalizationBase
                         getter.Culture = culture;
                     }
                 }
+                if (getter.Value is { }) 
+                {
+                    break;
+                }
             }
             getter.Value ??= $"[{ask}]";
             _cachedValues[ask] = getter;
@@ -153,7 +157,10 @@ public class LocalizationBase
                         getter.Culture = culture;
                     }
                 }
-
+                if (getter.Value is { })
+                {
+                    break;
+                }
             }
             _cachedValues[ask] = getter;
         }
