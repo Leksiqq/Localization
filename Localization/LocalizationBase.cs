@@ -8,63 +8,41 @@ namespace Net.Leksi.Localization;
 
 public class LocalizationBase
 {
-    private readonly Dictionary<string, List<ResourceManager>> _managers = [];
-    private readonly Dictionary<string, string> _cache = [];
-    private CultureInfo _culture;
+    private readonly List<ResourceManager> _managers = [];
+    private readonly Dictionary<string, GetterHolder> _getters = [];
+    private string _lastAsk = null!;
     public string this[string ask] => GetString(ask);
     public LocalizationBase()
     {
-        _culture = CultureInfo.CurrentUICulture;
-        Dictionary<Type, List<ResourceHolder>> resourceHolders = [];
-        Stack<Type> stack = [];
-        for(Type curr = GetType(); curr != typeof(LocalizationBase); curr = curr.BaseType!)
+        CultureInfo[] allCultures = CultureInfo.GetCultures(CultureTypes.AllCultures);
+        foreach (CultureInfo culture in allCultures)
         {
-            resourceHolders[curr] = [];
-            stack.Push(curr);
+            Console.WriteLine(culture);
         }
-        while(stack.TryPop(out Type? type))
+        Stack<Type> stack = [];
+        for (Type curr = GetType(); curr != typeof(LocalizationBase); curr = curr.BaseType!)
         {
-            foreach (ResourcePlaceAttribute attr in type.GetCustomAttributes<ResourcePlaceAttribute>(false))
-            {
-                ResourceHolder rh = new()
-                {
-                    BaseName = attr.BaseName
-                };
-                Type targetType = attr.TargetType ?? type;
-                rh.Assembly = attr.ResourceAssembly switch {
-                    ResourceAssembly.Current or null => type.Assembly,
-                    ResourceAssembly.Defining => targetType.Assembly,
-                    _ => Assembly.Load(attr.OtherAssemblyFullName ?? throw new Exception())
-                };
-                resourceHolders[targetType].Add(rh);
-            }
+            stack.Push(curr);
         }
         StringBuilder sb = new();
         int pos = 0;
-        foreach(KeyValuePair<Type, List<ResourceHolder>> entry in resourceHolders)
+        while (stack.TryPop(out Type? type))
         {
-            foreach (ResourceHolder rh in entry.Value)
+            foreach (ResourcePlaceAttribute attr in type.GetCustomAttributes<ResourcePlaceAttribute>(false))
             {
-                IEnumerable<string> resources = rh.Assembly.GetManifestResourceNames().Select(v => v[..v.LastIndexOf(".resources")]);
-                if (!resources.Contains(rh.BaseName))
+                Assembly ass = attr.OtherAssemblyFullName is { }
+                    ? Assembly.Load(attr.OtherAssemblyFullName)
+                    : type.Assembly;
+                IEnumerable<string> resources = ass.GetManifestResourceNames()
+                    .Select(v => v[..v.LastIndexOf(".resources")]);
+                if (!resources.Contains(attr.BaseName))
                 {
-                    sb.Append($"\n{++pos}. {entry.Key}:\n    there is no resource '{rh.BaseName}' in assembly {rh.Assembly}");
+                    sb.Append($"\n{++pos}. There is no resource '{attr.BaseName}' in assembly {ass}");
                     sb.Append($"\n    Use one of [{string.Join(", ", resources)}], or create new one.");
                 }
                 else
                 {
-                    rh.ResourceManager = new ResourceManager(rh.BaseName, rh.Assembly);
-                }
-            }
-        }
-        foreach(PropertyInfo pi in GetType().GetProperties())
-        {
-            if(pi.DeclaringType != typeof(LocalizationBase))
-            {
-                _managers[pi.Name] = resourceHolders[pi.DeclaringType!]!.Select(rh => rh.ResourceManager).ToList();
-                if (_managers[pi.Name].Count == 0)
-                {
-                    sb.Append($"\n{++pos}. {pi.DeclaringType!}:\n    there is no {typeof(ResourcePlaceAttribute)} for type.");
+                    _managers.Add(new ResourceManager(attr.BaseName, ass));
                 }
             }
         }
@@ -74,27 +52,98 @@ public class LocalizationBase
             throw new Exception(sb.ToString());
         }
     }
-    protected string GetString([CallerMemberName] string ask = null!)
+    public IEnumerable<ResourceInfo> GetResourceInfo(CultureInfo? cultureInfo = null)
     {
-        if (_culture != CultureInfo.CurrentUICulture)
+        CultureInfo? savedCultureInfo = null;
+        try
         {
-            _culture = CultureInfo.CurrentUICulture;
-            _cache.Clear();
-        }
-        if (!_cache.TryGetValue(ask!, out string ? ans))
-        {
-            if (_managers.TryGetValue(ask, out List<ResourceManager>? list))
+            if (cultureInfo is { } && cultureInfo != CultureInfo.CurrentUICulture)
             {
-                foreach (ResourceManager rm in list)
+                savedCultureInfo = CultureInfo.CurrentUICulture;
+                CultureInfo.CurrentUICulture = cultureInfo;
+            }
+            foreach (PropertyInfo pi in GetType().GetProperties())
+            {
+                if (pi.DeclaringType != typeof(LocalizationBase))
                 {
-                    if (rm.GetString(ask) is string s)
+                    object? ans = pi.GetValue(this);
+                    if (_lastAsk == pi.Name)
                     {
-                        ans = s;
+                        GetterHolder gh = _getters[pi.Name];
+                        yield return new ResourceInfo
+                        {
+                            Name = pi.Name,
+                            Value = ans,
+                            BaseName = gh.BaseName,
+                            ReturnType = gh.ReturnType,
+                            DeclaringType = pi.DeclaringType!,
+                        };
                     }
                 }
             }
-            ans ??= $"[{ask}]";
-            _cache[ask] = ans;
+        }
+        finally 
+        {
+            if (savedCultureInfo is { })
+            {
+                CultureInfo.CurrentUICulture = savedCultureInfo;
+            }
+        }
+    }
+    protected string GetString([CallerMemberName] string ask = null!)
+    {
+        _lastAsk = ask;
+        string ans = null!;
+        if (!_getters.TryGetValue(ask!, out GetterHolder? getter))
+        {
+            getter = new GetterHolder
+            {
+                ReturnType = typeof(string),
+            };
+            foreach (ResourceManager rm in _managers)
+            {
+                if (rm.GetString(ask) is string s)
+                {
+                    ans = s;
+                    getter.BaseName = rm.BaseName;
+                    getter.Getter = arg => rm.GetString(arg);
+                }
+            }
+            getter.Getter ??= arg => $"[{arg}]";
+            _getters[ask] = getter;
+            ans ??= (string)getter.Getter.Invoke(ask)!;
+        }
+        else
+        {
+            ans = (string)getter.Getter.Invoke(ask)!;
+        }
+        return ans;
+    }
+    protected object? GetObject([CallerMemberName] string ask = null!)
+    {
+        _lastAsk = ask;
+        object? ans = null;
+        if (!_getters.TryGetValue(ask!, out GetterHolder? getter))
+        {
+            getter = new GetterHolder
+            {
+                ReturnType = typeof(object),
+            };
+            foreach (ResourceManager rm in _managers)
+            {
+                if (rm.GetObject(ask) is object o)
+                {
+                    ans = o;
+                    getter.BaseName = rm.BaseName;
+                    getter.Getter = arg => rm.GetObject(arg);
+                }
+            }
+            getter.Getter ??= arg => null;
+            _getters[ask] = getter;
+        }
+        else
+        {
+            ans = getter.Getter.Invoke(ask);
         }
         return ans;
     }
