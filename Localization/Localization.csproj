@@ -7,11 +7,19 @@
     <RootNamespace>Net.Leksi.Localization</RootNamespace>
     <AssemblyName>Net.Leksi.Localization</AssemblyName>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Compile Remove="Properties\**" />
-    <EmbeddedResource Remove="Properties\**" />
-    <None Remove="Properties\**" />
-  </ItemGroup>
-
+  <PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <Title>$(AssemblyName)</Title>
+    <Authors>leksiq</Authors>
+    <Copyright>Алексей Юрьевич Захаров &lt;leksi@leksi.net&gt;, 2024</Copyright>
+    <PackageProjectUrl>https://github.com/Leksiqq/Localization/wiki</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Leksiqq/Localization</RepositoryUrl>
+    <IsPackable>true</IsPackable>
+    <Version>1.0.0</Version>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageTags>localization internationalization culture wpf</PackageTags>
+    <Description>The wrapper of the standard c# resources subsystem, convienient for localization.</Description>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
+    <PackageOutputPath>../../nuget.local</PackageOutputPath>
+  </PropertyGroup>
 </Project>

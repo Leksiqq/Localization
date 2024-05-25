@@ -58,85 +58,42 @@ public class LocalizationBase
             throw new Exception(sb.ToString());
         }
     }
-    public IEnumerable<ResourceInfo> GetResourceInfo(CultureInfo? cultureInfo = null)
+    public IEnumerable<ResourceInfo> GetResourceInfo()
     {
-        CultureInfo? savedCultureInfo = null;
-        bool cultureChanged = false;
-        try
+        foreach (PropertyInfo pi in GetType().GetProperties().OrderBy(pi => pi.Name))
         {
-            if (cultureInfo is { } && cultureInfo != Culture)
+            if (pi.DeclaringType != typeof(LocalizationBase))
             {
-                savedCultureInfo = _culture;
-                Culture = cultureInfo;
-                cultureChanged = true;
-            }
-            foreach (PropertyInfo pi in GetType().GetProperties().OrderBy(pi => pi.Name))
-            {
-                if (pi.DeclaringType != typeof(LocalizationBase))
+                try
                 {
-                    try
-                    {
-                        _ = pi.GetValue(this);
-                    }
-                    catch { }
-                    if (_lastAsk == pi.Name)
-                    {
-                        ValueHolder vh = _cachedValues[pi.Name];
-                        yield return new ResourceInfo
-                        {
-                            Name = pi.Name,
-                            Value = vh.Value,
-                            BaseName = vh.BaseName,
-                            ReturnType = vh.ReturnType,
-                            DeclaringType = pi.DeclaringType!,
-                            Culture = vh.Culture,
-                        };
-                    }
+                    _ = pi.GetValue(this);
                 }
-            }
-        }
-        finally
-        {
-            if (cultureChanged)
-            {
-                Culture = savedCultureInfo;
+                catch { }
+                if (_lastAsk == pi.Name)
+                {
+                    ValueHolder vh = _cachedValues[pi.Name];
+                    yield return new ResourceInfo
+                    {
+                        Name = pi.Name,
+                        Value = vh.Value,
+                        BaseName = vh.BaseName,
+                        ReturnType = vh.ReturnType,
+                        DeclaringType = pi.DeclaringType!,
+                        Culture = vh.Culture,
+                    };
+                }
             }
         }
     }
     protected string GetString([CallerMemberName] string ask = null!)
     {
-        _lastAsk = ask;
-        CheckCulture();
-        if (!_cachedValues.TryGetValue(ask!, out ValueHolder? getter))
-        {
-            getter = new ValueHolder
-            {
-                ReturnType = typeof(string),
-            };
-            foreach(CultureInfo culture in _probeCultureList)
-            {
-                foreach (ResourceManager rm in _managers)
-                {
-                    if(
-                        rm.GetString(ask!, culture) is string s
-                    )
-                    {
-                        getter.Value = s;
-                        getter.BaseName = rm.BaseName;
-                        getter.Culture = culture;
-                    }
-                }
-                if (getter.Value is { }) 
-                {
-                    break;
-                }
-            }
-            getter.Value ??= $"[{ask}]";
-            _cachedValues[ask] = getter;
-        }
-        return (string)getter.Value!;
+        return Get<string>(ask => $"[{ask}]", ask)!;
     }
     protected object? GetObject([CallerMemberName] string ask = null!)
+    {
+        return Get<object>(ask => null, ask);
+    }
+    private T? Get<T>(Func<string,T?> getDefault, string ask)
     {
         _lastAsk = ask;
         CheckCulture();
@@ -144,13 +101,13 @@ public class LocalizationBase
         {
             getter = new ValueHolder
             {
-                ReturnType = typeof(object),
+                ReturnType = typeof(T),
             };
             foreach (CultureInfo culture in _probeCultureList)
             {
                 foreach (ResourceManager rm in _managers)
                 {
-                    if (rm.GetObject(ask, culture) is object o)
+                    if (rm.GetObject(ask, culture) is T o)
                     {
                         getter.Value = o;
                         getter.BaseName = rm.BaseName;
@@ -162,10 +119,12 @@ public class LocalizationBase
                     break;
                 }
             }
+            getter.Value ??= getDefault(ask);
             _cachedValues[ask] = getter;
         }
-        return (string)getter.Value!;
+        return (T)getter.Value!;
     }
+
     private void CheckCulture()
     {
         if (_cachedCulture != Culture)
