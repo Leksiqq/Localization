@@ -19,16 +19,16 @@ builder.Logging.SetMinimumLevel(LogLevel.Information);
 
 using IHost host = builder.Build();
 
-ILogger logger =
-    host.Services.GetRequiredService<ILoggerFactory>()
+ILogger logger = host.Services.GetRequiredService<ILoggerFactory>()
         .CreateLogger("Localization.Example");
 
-MessageService messageService =
-    host.Services.GetRequiredService<MessageService>();
-logger.LogInformation(
-    "{Msg}",
-    messageService.GreetingMessage);
+MessageService messageService = host.Services.GetRequiredService<MessageService>();
 
-logger.LogInformation(
-    "{Msg}",
-    string.Format(messageService.FormattedMessage, DateTime.Today.AddDays(-3), 37.63));
+logger.LogInformation("{Msg}", messageService.GreetingMessage);
+
+logger.LogInformation("{Msg}", string.Format(messageService.FormattedMessage, DateTime.Today.AddDays(-3), 37.63));
+
+foreach(CultureInfo culture in messageService.GetSupportedCultures())
+{
+    logger.LogInformation("{Msg}", culture);
+}

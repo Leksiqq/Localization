@@ -8,10 +8,48 @@ namespace Net.Leksi.Localization;
 
 public class LocalizationBase
 {
+    private class CultureComparer : IComparer<CultureInfo>
+    {
+        private static CultureComparer instance = new();
+        internal static CultureComparer Instance => instance;
+        private CultureComparer() { }
+        public int Compare(CultureInfo? x, CultureInfo? y)
+        {
+            if (string.IsNullOrEmpty(y!.Name) && !string.IsNullOrEmpty(x!.Name))
+            {
+                return -1;
+            }
+            else if (!string.IsNullOrEmpty(y!.Name) && string.IsNullOrEmpty(x!.Name))
+            {
+                return 1;
+            }
+            else if(x!.Name == y!.Name)
+            {
+                return 0;
+            }
+            string[] xParts = GetParts(x!);
+            string[] yParts = GetParts(y!);
+            int result = xParts[0].CompareTo(yParts[0]);
+            if (result != 0)
+            {
+                return result;
+            }
+            return xParts[1].CompareTo(yParts[1]);
+        }
+        private static string[] GetParts(CultureInfo culture)
+        {
+            int pos = culture.Name.IndexOf('-');
+            if(pos > 0)
+            {
+                return culture.Name.Split('-', 2);
+            }
+            return [culture.Name, string.Empty];
+        }
+    }
     private readonly List<ResourceManager> _managers = [];
     private readonly Dictionary<string, ValueHolder> _cachedValues = [];
     private readonly List<CultureInfo> _probeCultureList = [];
-    private string _lastAsk = null!;
+    private string? _lastAsk;
     private CultureInfo? _cachedCulture = null;
     private CultureInfo? _culture = null;
     public CultureInfo? Culture
@@ -64,6 +102,7 @@ public class LocalizationBase
         {
             if (pi.DeclaringType != typeof(LocalizationBase))
             {
+                _lastAsk = null;
                 try
                 {
                     _ = pi.GetValue(this);
@@ -84,6 +123,41 @@ public class LocalizationBase
                 }
             }
         }
+    }
+    public IEnumerable<CultureInfo> GetSupportedCultures()
+    {
+        CultureInfo? saved = _culture;
+        foreach(
+            CultureInfo culture 
+            in 
+            CultureInfo.GetCultures(CultureTypes.AllCultures)
+                .Order(CultureComparer.Instance).Append(CultureInfo.InvariantCulture)
+        )
+        {
+            Culture = culture;
+            foreach (PropertyInfo pi in GetType().GetProperties().OrderBy(pi => pi.Name))
+            {
+                if (pi.DeclaringType != typeof(LocalizationBase))
+                {
+                    _lastAsk = null;
+                    try
+                    {
+                        _ = pi.GetValue(this);
+                    }
+                    catch { }
+                    if (_lastAsk == pi.Name )
+                    {
+                        ValueHolder vh = _cachedValues[pi.Name];
+                        if(vh.Culture == culture)
+                        {
+                            yield return culture;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        Culture = saved;
     }
     protected string GetString([CallerMemberName] string ask = null!)
     {
