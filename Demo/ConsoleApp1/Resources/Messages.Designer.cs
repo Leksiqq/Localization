@@ -59,5 +59,23 @@ namespace ConsoleApp1.Resources {
                 resourceCulture = value;
             }
         }
+        
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на On {0:D} my dinner cost {1:C}..
+        /// </summary>
+        internal static string DinnerPriceFormat {
+            get {
+                return ResourceManager.GetString("DinnerPriceFormat", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Hi friends, the &quot;.NET&quot; developer community is excited to see you here!.
+        /// </summary>
+        internal static string GreetingMessage {
+            get {
+                return ResourceManager.GetString("GreetingMessage", resourceCulture);
+            }
+        }
     }
 }

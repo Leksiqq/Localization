@@ -118,9 +118,12 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="DinnerPriceFormat" xml:space="preserve">
-    <value>On {0:D} my dinner cost {1:C}.</value>
+    <value>Sur {0:D} mon coût de dîner {1:C}.</value>
   </data>
   <data name="GreetingMessage" xml:space="preserve">
-    <value>Hi friends, the ".NET" developer community is excited to see you here!</value>
+    <value>Salut les amis, la communauté de développeurs « .NET » est ravie de vous voir ici !</value>
+  </data>
+  <data name="MainWindowTitle" xml:space="preserve">
+    <value>Démo de localisation</value>
   </data>
 </root>

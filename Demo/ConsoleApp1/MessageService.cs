@@ -2,8 +2,8 @@
 
 namespace ConsoleApp1;
 [ResourcePlace("ConsoleApp1.Resources.Messages")]
-internal class MessageService: LocalizationBase
+public class MessageService: LocalizationBase
 {
     public string GreetingMessage => GetString();
-    public string FormattedMessage => GetString();
+    public string DinnerPriceFormat(params object?[] args) => GetFormattedString(args);
 }

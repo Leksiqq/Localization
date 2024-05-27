@@ -5,13 +5,7 @@ using Microsoft.Extensions.Logging;
 using System.Globalization;
 using static System.Text.Encoding;
 
-
 Console.OutputEncoding = Unicode;
-
-if (args is [var cultureName])
-{
-    CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(cultureName);
-}
 
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddSingleton<MessageService> ();
@@ -24,11 +18,11 @@ ILogger logger = host.Services.GetRequiredService<ILoggerFactory>()
 
 MessageService messageService = host.Services.GetRequiredService<MessageService>();
 
+if (args is [var cultureName])
+{
+    messageService.Culture = CultureInfo.GetCultureInfo(cultureName);
+}
+
 logger.LogInformation("{Msg}", messageService.GreetingMessage);
 
-logger.LogInformation("{Msg}", string.Format(messageService.FormattedMessage, DateTime.Today.AddDays(-3), 37.63));
-
-foreach(CultureInfo culture in messageService.GetSupportedCultures())
-{
-    logger.LogInformation("{Msg}", culture);
-}
+logger.LogInformation("{Msg}", messageService.DinnerPriceFormat(DateTime.Today.AddDays(-3), 37.63));
