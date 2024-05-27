@@ -11,6 +11,7 @@
     <Title>$(AssemblyName)</Title>
     <Authors>leksiq</Authors>
     <Copyright>Алексей Юрьевич Захаров &lt;leksi@leksi.net&gt;, 2024</Copyright>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageProjectUrl>https://github.com/Leksiqq/Localization/wiki</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Leksiqq/Localization</RepositoryUrl>
     <IsPackable>true</IsPackable>
