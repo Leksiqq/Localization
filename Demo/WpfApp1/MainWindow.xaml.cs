@@ -7,10 +7,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 {
     public event PropertyChangedEventHandler? PropertyChanged;
     public ObservableCollection<CultureInfo> Cultures { get; private init; } = [];
-    public string DinnerPriceFormat => (Application.Current.Resources["MessageService"] as MyMessageService)!.DinnerPriceFormat(DateTime.Today.AddDays(-3), 37.63);
-    public MainWindow(IServiceProvider services)
+    public string DinnerPriceFormat => 
+        (Application.Current.Resources["MessageService"] as MyMessageService)!
+            .DinnerPriceFormat(DateTime.Today.AddDays(-3), 37.63);
+    public MainWindow()
     {
-        MyMessageService messageService = (Application.Current.Resources["MessageService"] as MyMessageService)!;
+        MyMessageService messageService = 
+            (Application.Current.Resources["MessageService"] as MyMessageService)!;
         messageService.PropertyChanged += (s, e) => PropertyChanged?.Invoke(this, e);
         Cultures.Add(messageService.Culture!);
         Cultures.Add(CultureInfo.GetCultureInfo("en-US"));
@@ -23,9 +26,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         InitializeComponent();
         CulturesList.SelectedItem = messageService.Culture!;
     }
-    private void CulturesList_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    private void CulturesList_SelectionChanged(
+        object sender, System.Windows.Controls.SelectionChangedEventArgs e
+    )
     {
-        MyMessageService messageService = (Application.Current.Resources["MessageService"] as MyMessageService)!;
+        MyMessageService messageService = 
+            (Application.Current.Resources["MessageService"] as MyMessageService)!;
         messageService.Culture = CulturesList.SelectedItem as CultureInfo;
     }
 }
