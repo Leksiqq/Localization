@@ -8,6 +8,9 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Demo", "Demo", "{DEA56EF2-74BC-43E8-A5D0-DEDC894D9C7E}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConsoleApp1", "Demo\ConsoleApp1\ConsoleApp1.csproj", "{248CD6AA-064D-4216-A78E-CA9D567FF6BF}"
+	ProjectSection(ProjectDependencies) = postProject
+		{A4BAC0B5-B3DA-4FAD-B1ED-EAE4C6D4C0E9} = {A4BAC0B5-B3DA-4FAD-B1ED-EAE4C6D4C0E9}
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WpfApp1", "Demo\WpfApp1\WpfApp1.csproj", "{E09F788B-5A74-4AD0-AF48-191E93830C14}"
 EndProject
