@@ -107,7 +107,7 @@ public class LocalizationBase: INotifyPropertyChanged
         }
         yield break;
     }
-    public string GetFormattedString(object?[] args, [CallerMemberName] string ask = null!)
+    protected string GetFormattedString(object?[] args, [CallerMemberName] string ask = null!)
     {
         CultureInfo saved = CultureInfo.CurrentCulture;
         try

@@ -2,7 +2,7 @@ The **Net.Leksi.Localization** library is designed to simplify the process of lo
 
 All classes are contained in the *Net.Leksi.Localization* namespace.
 
-* [LocalizationBase](https://github.com/Leksiqq/Localization/wiki/LocalizationBase-en) - base class for objects whose properties contain values that depend on a given culture.
+* [LocalizationBase](https://github.com/Leksiqq/Localization/wiki/LocalizationBase-en) - base class for objects whose properties contain and methods return values that depend on a given culture.
 * [ResourcePlaceAttribute](https://github.com/Leksiqq/Localization/wiki/ResourcePlaceAttribute-en) is an attribute of a class derived from [LocalizationBase](LocalizationBase-en) that associates it with an application or other assembly resource that contains culture-specific values.
 * [ResourceInfo](https://github.com/Leksiqq/Localization/wiki/ResourceInfo-en) - auxiliary class for use in the development process. Contains information about a culture-specific value: key, value, value type, what class it is a property of, the name of the resource it came from, the *locale* of that resource.
 
