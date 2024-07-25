@@ -42,7 +42,7 @@ public class LocalizationBase: INotifyPropertyChanged
         {
             foreach (ResourcePlaceAttribute attr in type.GetCustomAttributes<ResourcePlaceAttribute>(false))
             {
-                Assembly ass = attr.OtherAssemblyFullName is { }
+                Assembly ass = attr.OtherAssemblyFullName != null
                     ? Assembly.Load(attr.OtherAssemblyFullName)
                     : type.Assembly;
                 IEnumerable<string> resources = ass.GetManifestResourceNames()
@@ -98,7 +98,7 @@ public class LocalizationBase: INotifyPropertyChanged
         {
             foreach (var item in _managers)
             {
-                if (item.GetResourceSet(culture, true, false) is { })
+                if (item.GetResourceSet(culture, true, false) != null)
                 {
                     yield return culture;
                     break;
